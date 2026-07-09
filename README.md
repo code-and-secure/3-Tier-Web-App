@@ -1,4 +1,4 @@
-# 3-tier-web-app
+# 3-Tier-Web-App
 
 A small end-to-end web app stack, built to be deployable on an Azure free-tier
 subscription while covering the Bicep concepts you'll actually use day to day:
