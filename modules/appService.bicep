@@ -10,6 +10,10 @@ param projectName string
 param uniqueSuffix string
 param appInsightsConnectionString string
 param keyVaultUri string
+param sqlServerFqdn string
+param sqlDatabaseName string
+param sqlAdminLogin string
+param sqlPasswordSecretUri string
 
 var appServicePlanName = 'plan-${projectName}'
 var webAppName = toLower('app-${projectName}-${uniqueSuffix}')
@@ -45,6 +49,22 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'KEY_VAULT_URI'
           value: keyVaultUri
+        }
+        {
+          name: 'SQL_SERVER'
+          value: sqlServerFqdn
+        }
+        {
+          name: 'SQL_DATABASE'
+          value: sqlDatabaseName
+        }
+        {
+          name: 'SQL_USER'
+          value: sqlAdminLogin
+        }
+        {
+          name: 'SQL_PASSWORD'
+          value: '@Microsoft.KeyVault(SecretUri=${sqlPasswordSecretUri})'
         }
       ]
     }

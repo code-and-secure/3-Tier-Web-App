@@ -80,6 +80,16 @@ module sqlDb 'modules/sqlDatabase.bicep' = {
   }
 }
 
+module sqlPasswordSecret 'modules/keyVaultSecret.bicep' = {
+  name: 'sqlPasswordSecretDeploy'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.keyVaultName
+    secretName: 'sql-admin-password'
+    secretValue: sqlAdminPassword
+  }
+}
+
 module appService 'modules/appService.bicep' = {
   name: 'appServiceDeploy'
   scope: rg
@@ -89,6 +99,10 @@ module appService 'modules/appService.bicep' = {
     uniqueSuffix: uniqueSuffix
     appInsightsConnectionString: logAnalytics.outputs.appInsightsConnectionString
     keyVaultUri: keyVault.outputs.keyVaultUri
+    sqlServerFqdn: sqlDb.outputs.sqlServerFqdn
+    sqlDatabaseName: sqlDb.outputs.sqlDatabaseName
+    sqlAdminLogin: sqlAdminLogin
+    sqlPasswordSecretUri: sqlPasswordSecret.outputs.secretUri
   }
 }
 

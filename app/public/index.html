@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3-Tier Web App — Guestbook</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>3-Tier Web App</h1>
+    <p>A small guestbook backed by Azure App Service, SQL Database, and Key Vault.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Sign the guestbook</h2>
+      <form id="guestbook-form">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" maxlength="100" required />
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="200" required />
+
+        <label for="message">Message</label>
+        <textarea id="message" name="message" maxlength="1000" rows="4" required></textarea>
+
+        <button type="submit">Submit</button>
+        <p id="form-status" class="status" role="status"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Recent entries</h2>
+      <ul id="entries-list" class="entries"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

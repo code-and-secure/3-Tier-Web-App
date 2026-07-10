@@ -23,14 +23,67 @@ modules, parameters, variables, outputs, secure params, dependencies via
 azure-bicep-practice/
 ├── main.bicep                  # orchestrator, subscription-scoped
 ├── main.parameters.json        # parameter values
-└── modules/
-    ├── network.bicep           # VNet + app/data subnets
-    ├── logAnalytics.bicep      # Log Analytics + App Insights
-    ├── storageAccount.bicep    # storage account + blob container
-    ├── keyVault.bicep          # Key Vault (RBAC auth)
-    ├── sqlDatabase.bicep       # SQL server + free-tier database
-    └── appService.bicep        # App Service plan (F1) + web app
+├── modules/
+│   ├── network.bicep           # VNet + app/data subnets
+│   ├── logAnalytics.bicep      # Log Analytics + App Insights
+│   ├── storageAccount.bicep    # storage account + blob container
+│   ├── keyVault.bicep          # Key Vault (RBAC auth)
+│   ├── keyVaultSecret.bicep    # generic "write one secret" module
+│   ├── sqlDatabase.bicep       # SQL server + free-tier database
+│   └── appService.bicep        # App Service plan (F1) + web app
+└── app/                        # Node.js guestbook app deployed to the Web App
+    ├── package.json
+    ├── server.js                # Express server + API routes
+    ├── db.js                    # SQL connection + queries (mssql package)
+    └── public/                  # static frontend (index.html, styles.css, app.js)
 ```
+
+## The app
+
+`app/` is a minimal guestbook: a responsive form (name, email, message) that
+writes rows into the `GuestbookEntries` table in the SQL Database, and a list
+that reads them back. It runs on the App Service Web App the Bicep template
+provisions, and demonstrates the 3-tier shape end to end:
+
+- **Presentation** — static HTML/CSS/JS served from `app/public/`
+- **Application** — Express routes in `app/server.js`
+- **Data** — Azure SQL Database, connected via `app/db.js`
+
+The SQL password never appears in app code or app settings in plaintext —
+it's stored as a Key Vault secret (`sql-admin-password`, written by
+`modules/keyVaultSecret.bicep`) and the Web App reads it through a
+[Key Vault reference app
+setting](https://learn.microsoft.com/azure/app-service/app-service-key-vault-references)
+(`SQL_PASSWORD`), resolved automatically at runtime using the Web App's
+managed identity. Server name, database name, and admin login aren't secret,
+so they're passed as plain app settings (`SQL_SERVER`, `SQL_DATABASE`,
+`SQL_USER`).
+
+### Deploying the app code
+
+The Bicep deployment only provisions the empty Web App — deploy the app code
+separately with zip deploy:
+
+```bash
+cd app
+npm install --omit=dev
+zip -r ../app.zip . -x "node_modules/.cache/*"
+cd ..
+
+az webapp deploy \
+  --resource-group rg-3tierwebapp-dev \
+  --name <your-web-app-name> \
+  --src-path app.zip \
+  --type zip
+```
+
+Find `<your-web-app-name>` from the deployment output (`webAppUrl`) or:
+```bash
+az webapp list --resource-group rg-3tierwebapp-dev --query "[].name" -o tsv
+```
+
+Give it a minute after deploy, then reload the web app URL — the guestbook
+page should replace the default placeholder page.
 
 ## Prerequisites
 
