@@ -1,21 +1,70 @@
 # 3-Tier-Web-App
 
-A small end-to-end web app stack, built to be deployable on an Azure free-tier
-subscription while covering the Bicep concepts you'll actually use day to day:
-modules, parameters, variables, outputs, secure params, dependencies via
-`outputs`, RBAC role assignments, and subscription-scope deployment.
+## Purpose
 
-## What gets deployed
+This project exists to **practice Azure infrastructure-as-code (Bicep)** and
+**basic full-stack development**, using a real (if small) app as the excuse.
+It's a learning project, not a production system. Along the way it covers
+Bicep concepts you'll actually use day to day: modules, parameters,
+variables, outputs, secure params, dependencies via `outputs`, RBAC role
+assignments, and subscription-scope deployment — plus a working example of
+how a frontend, a backend, and a database talk to each other securely.
+
+## What's actually going on here (plain English)
+
+Think of this repo as building a tiny house, one room at a time, using code
+instead of bricks:
+
+1. **`main.bicep` is the blueprint.** Running it tells Azure "build me all of
+   this" — a resource group (a folder to keep everything organized), a
+   network, a place to store files, a vault for secrets, a database, and a
+   web server. Azure reads the blueprint and creates the real resources.
+2. **`app/` is the actual website** that runs *inside* the web server Azure
+   created. It's a simple guestbook: a form where someone types their name,
+   email, and a message, which gets saved into the database, and a list
+   below it that shows everyone who's signed so far.
+3. **The pieces are wired together so nothing insecure is exposed.** The
+   database password is never written in plain text anywhere — it's locked
+   in the vault, and the web server is given quiet, automatic permission to
+   read it (a "Key Vault reference"), instead of the password being pasted
+   into settings or code where anyone with access could see it.
+4. **A separate service watches everything while it runs** (Log Analytics +
+   Application Insights) — every time someone visits the site or submits the
+   form, it quietly records what happened, so if something breaks you can
+   look at the logs instead of guessing.
+
+So in short: you write a description of the infrastructure you want → Azure
+builds it → your app code runs on top of it → a monitoring service watches
+it all.
+
+## Important: this is *not* entirely free
+
+Azure's "free tier" doesn't mean every service here costs nothing forever —
+each service has its **own free allowance**, and once you go past that
+allowance, it starts billing normally (against your subscription's credits
+or payment method). Some resources below are free with essentially no
+limit for a learning project (like the resource group or virtual network),
+others are free only up to a certain amount of usage per day/month, and
+going over that amount is where real charges can start:
 
 | Resource | SKU / tier | Free tier note |
 |---|---|---|
 | Resource group | - | free |
 | Virtual network + 2 subnets | - | free |
-| App Service Plan + Web App | F1 (Free) | 60 CPU min/day free |
-| Storage account | Standard_LRS | ~5GB free for 12 months on a new subscription |
-| Key Vault | Standard | first 10k operations/month free |
-| SQL Server + Database | GP_S_Gen5_1 with `useFreeLimit` | 100,000 vCore-seconds & 32GB free/month (1 per subscription) |
-| Log Analytics workspace + App Insights | PerGB2018 | 5GB/day ingestion free |
+| App Service Plan + Web App | F1 (Free) | 60 CPU min/day free — extra usage isn't billed on F1, the app just gets throttled/paused instead |
+| Storage account | Standard_LRS | ~5GB free for 12 months on a new subscription — billed per GB after that |
+| Key Vault | Standard | first 10k operations/month free — billed per operation after that |
+| SQL Server + Database | GP_S_Gen5_1 with `useFreeLimit` | 100,000 vCore-seconds & 32GB free/month (1 free database per subscription) — billed normally after that, or auto-paused depending on `freeLimitExhaustionBehavior` |
+| Log Analytics workspace + App Insights | PerGB2018 | 5GB/day ingestion free — billed per GB after that |
+
+**Practical takeaway:** for a small personal guestbook you're testing
+casually, you're very unlikely to exceed any of these limits. But keep an
+eye on your subscription's **Costs** page in the Azure Portal while
+experimenting, and see [Clean up](#clean-up) below to delete everything
+when you're done so nothing keeps running (and potentially billing) in the
+background.
+
+## What gets deployed
 
 ## Project structure
 
