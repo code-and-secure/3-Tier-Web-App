@@ -179,7 +179,9 @@ Open that URL in a browser to confirm the default App Service page loads.
 | `az deployment sub what-if` | Compiles the template and shows a **preview** of what would be created/changed/deleted at subscription scope, without actually deploying anything. Safe to run repeatedly. |
 | `az deployment sub create` | Compiles and **actually deploys** the template at subscription scope — this is what creates the resource group and all resources inside it. |
 | `az deployment sub show --name <deployment-name> --query ...` | Reads back outputs (like the web app URL) from a deployment that already ran, without redeploying. |
-| `az group delete --name <rg-name> --yes --no-wait` | Deletes the entire resource group and everything in it. Used for cleanup — see below. |
+| `az group delete --name <rg-name> --yes --no-wait` | Deletes the entire resource group and everything in it, without waiting for the delete to finish. Used for cleanup — see below. |
+| `az group exists --name <rg-name>` | Checks whether a resource group still exists — prints `true`/`false`. Use to confirm a `--no-wait` delete has actually finished before redeploying. |
+| `az keyvault purge --name <vault-name> --location <original-location>` | Permanently removes a soft-deleted Key Vault so its name can be reused. Needed because `az group delete` only soft-deletes vaults, not hard-deletes them. |
 
 Why `sub` (subscription scope) instead of the more common `group` scope:
 `main.bicep` sets `targetScope = 'subscription'` so it can create the
@@ -272,6 +274,19 @@ in, not your new target region):
 az keyvault purge --name <vault-name> --location <original-location>
 ```
 
+**Redeploying too soon after `az group delete --no-wait`**
+`--no-wait` returns immediately and deletes in the background — if you
+redeploy right away you can hit naming/location conflicts because the old
+resources aren't gone yet. Check whether the group still exists:
+```bash
+az group exists --name rg-3tierwebapp-dev
+```
+`true` means it's still deleting. Poll until it flips to `false` before
+redeploying:
+```bash
+until [ $(az group exists --name rg-3tierwebapp-dev) = "false" ]; do sleep 15; echo checking...; done; echo done
+```
+
 **`InvalidDeploymentLocation` — deployment 'X' already exists in location
 'Y'**
 At subscription scope, a deployment **name** is tied to the location it was
@@ -292,6 +307,36 @@ az group delete --name rg-3tierwebapp-dev --yes --no-wait
 
 (Resource group name follows `rg-<projectName>-<environment>` — adjust if
 you changed `projectName` or `environment` in `main.parameters.json`.)
+
+### Full teardown (remove everything, including soft-deleted remnants)
+
+`az group delete` removes every resource in the group, but **Key Vault has
+soft-delete protection** — the vault itself survives in a recoverable state
+for its retention period (`softDeleteRetentionInDays`, 7 days in this
+template) even after the resource group is gone. If you want a completely
+clean subscription with nothing left behind (e.g. before handing off the
+subscription, or to immediately reuse the same `projectName`), wait for the
+group delete to finish and then purge the vault:
+
+```bash
+# 1. Delete the resource group and wait for it to fully finish
+az group delete --name rg-3tierwebapp-dev --yes
+```
+
+```bash
+# 2. Purge the soft-deleted Key Vault (permanently removes it)
+az keyvault purge --name <vault-name> --location <region-it-was-deployed-in>
+```
+
+Find `<vault-name>` (if you don't already know it) while the vault is still
+soft-deleted:
+```bash
+az keyvault list-deleted --query "[].name" -o tsv
+```
+
+Note step 1 omits `--no-wait` here on purpose — the command blocks until
+deletion is confirmed complete, so you don't need to poll `az group exists`
+before running the purge.
 
 ## Suggested learning path
 
