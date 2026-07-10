@@ -191,8 +191,41 @@ SQL free offer page, or remove `useFreeLimit` from
 billing for that resource.
 
 **Free-tier quota/region errors on App Service or SQL**
-Availability varies by region. If `eastus` fails, try `westus2` or
-`centralus` by changing the `location` parameter.
+Availability varies by region and by subscription — quota/capacity errors
+here are Azure-side, not a template problem. If a region fails, try another
+(e.g. `eastus` → `westus2` → `koreacentral`) by changing the `location`
+parameter. `RegionDoesNotAllowProvisioning` for SQL and
+`Current Limit (Total VMs): 0` for App Service are both regional
+capacity/quota issues that clear up by switching regions.
+
+**`SKU '' does not support Virtual Network Integration` on the App Service
+deployment**
+The **F1 (Free) App Service tier does not support VNet Integration** —
+that requires Basic (B1) tier or above. This was a template bug: the web app
+was wired into the VNet subnet even though the plan was F1. Fixed by
+removing `virtualNetworkSubnetId` from
+[modules/appService.bicep](modules/appService.bicep) — the VNet and its
+subnets still get created by
+[modules/network.bicep](modules/network.bicep) for learning purposes, the
+web app just isn't integrated into it while on the free tier.
+
+**Key Vault `VaultAlreadyExists` after deleting the resource group**
+Key Vault has **soft-delete** protection by default — deleting the resource
+group doesn't fully remove the vault, it goes into a recoverable state for
+a retention period. If you redeploy and get this error, purge it first
+(note: `--location` must be the region the vault was *originally* created
+in, not your new target region):
+```bash
+az keyvault purge --name <vault-name> --location <original-location>
+```
+
+**`InvalidDeploymentLocation` — deployment 'X' already exists in location
+'Y'**
+At subscription scope, a deployment **name** is tied to the location it was
+first used with. Reusing the same `--name` with a different `--location`
+fails. Either delete the old deployment record (`az deployment sub delete
+--name <name>`) or just use a new `--name` for each region you try (e.g.
+`bicep-practice-deploy-koreacentral`).
 
 ## Clean up
 

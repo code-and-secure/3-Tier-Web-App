@@ -89,7 +89,6 @@ module appService 'modules/appService.bicep' = {
     uniqueSuffix: uniqueSuffix
     appInsightsConnectionString: logAnalytics.outputs.appInsightsConnectionString
     keyVaultUri: keyVault.outputs.keyVaultUri
-    subnetId: network.outputs.appSubnetId
   }
 }
 

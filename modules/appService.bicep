@@ -1,14 +1,15 @@
 // modules/appService.bicep
-// Free tier (F1) App Service plan + a Linux web app, VNet-integrated,
-// with a system-assigned identity so it can read secrets from Key Vault
-// without storing credentials.
+// Free tier (F1) App Service plan + a Linux web app, with a system-assigned
+// identity so it can read secrets from Key Vault without storing credentials.
+// Note: F1 does not support VNet Integration (requires Basic tier or above),
+// so the web app is not wired into the VNet subnet despite one being
+// provisioned by modules/network.bicep — see README notes.
 
 param location string
 param projectName string
 param uniqueSuffix string
 param appInsightsConnectionString string
 param keyVaultUri string
-param subnetId string
 
 var appServicePlanName = 'plan-${projectName}'
 var webAppName = toLower('app-${projectName}-${uniqueSuffix}')
@@ -34,7 +35,6 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   }
   properties: {
     serverFarmId: appServicePlan.id
-    virtualNetworkSubnetId: subnetId
     siteConfig: {
       linuxFxVersion: 'NODE|20-lts'
       appSettings: [
